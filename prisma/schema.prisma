@@ -1,0 +1,62 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum INVOICESTATUS {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+model Invoice {
+  id         String        @id @default(cuid())
+  amount     Int
+  due_date   DateTime
+  created_at DateTime      @default(now())
+  updated_at DateTime      @updatedAt
+  customerId String
+  status     INVOICESTATUS @default(DRAFT)
+  customer   Customer      @relation(references: [id], fields: [customerId])
+  payments   Payment[]
+}
+
+model Payment {
+  id           String   @id @default(cuid())
+  invoice_id   String
+  invoice      Invoice  @relation(fields: [invoice_id], references: [id])
+  customer_id  String
+  customer     Customer @relation(fields: [customer_id], references: [id])
+  payment_date DateTime @default(now())
+}
+
+model Customer {
+  id          String    @id @default(cuid())
+  name        String
+  email       String
+  phoneNumber String
+  created_at  DateTime  @default(now())
+  invoices    Invoice[]
+  payments    Payment[]
+}
+
+model User {
+  id          String   @id @default(cuid())
+  fullName    String
+  email       String
+  phoneNumber String
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+  is_enabled  Boolean  @default(true)
+}
