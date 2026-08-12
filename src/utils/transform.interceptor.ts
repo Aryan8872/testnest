@@ -8,7 +8,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Response } from 'express';
 import { Reflector } from '@nestjs/core';
-import { RESPONSE_MESSAGE_KEY } from '../decorators/response-message.decorator';
+import { RESPONSE_MESSAGE_KEY } from '../decorators/response-message.decorator.js';
 @Injectable()
 export class TransformInterceptor<T> implements NestInterceptor {
   //Reflector reads the metadata that SetMetadata attached —
