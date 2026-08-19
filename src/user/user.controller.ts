@@ -43,10 +43,7 @@ export class UserController {
   }
 
   @Get(':id')
-  findOne(
-    @Param('id') id: string,
-    @CurrentTenant() tenantId: string,
-  ) {
+  findOne(@Param('id') id: string, @CurrentTenant() tenantId: string) {
     return this.userService.findOne(id, tenantId);
   }
 
@@ -62,10 +59,7 @@ export class UserController {
 
   @Delete(':id')
   @Roles(USERROLE.ADMIN, USERROLE.SUPERADMIN)
-  remove(
-    @Param('id') id: string,
-    @CurrentTenant() tenantId: string,
-  ) {
+  remove(@Param('id') id: string, @CurrentTenant() tenantId: string) {
     return this.userService.remove(id, tenantId);
   }
 }
