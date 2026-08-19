@@ -11,26 +11,34 @@ import { PrismaService } from '../prisma/prisma.service.js';
 export class CustomerService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async create(createCustomerDto: CreateCustomerDto) {
+  async create(createCustomerDto: CreateCustomerDto, tenantId: string) {
+    if (!tenantId) throw new BadRequestException('tenantId is required');
+
     return this.prismaService.customer.create({
-      data: createCustomerDto,
+      data: {
+        ...createCustomerDto,
+        tenant_id: tenantId,
+      },
     });
   }
 
-  async findAll(page = 1, limit = 20) {
+  async findAll(tenantId?: string, page = 1, limit = 20) {
     const pageNum = Number(page) || 1;
     const limitNum = Number(limit) || 20;
     const skip = (pageNum - 1) * limitNum;
 
+    const whereClause = tenantId ? { tenant_id: tenantId } : {};
+
     const [customers, total] = await this.prismaService.$transaction([
       this.prismaService.customer.findMany({
+        where: whereClause,
         take: limitNum,
         skip: skip,
         orderBy: {
           created_at: 'desc',
         },
       }),
-      this.prismaService.customer.count(),
+      this.prismaService.customer.count({ where: whereClause }),
     ]);
 
     return {
@@ -44,10 +52,12 @@ export class CustomerService {
     };
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, tenantId?: string) {
     if (!id) throw new BadRequestException('customerId is required');
-    const customer = await this.prismaService.customer.findUnique({
-      where: { id },
+    const whereClause = tenantId ? { id, tenant_id: tenantId } : { id };
+
+    const customer = await this.prismaService.customer.findFirst({
+      where: whereClause,
       include: { invoices: true, payments: true },
     });
     if (!customer)
@@ -55,18 +65,20 @@ export class CustomerService {
     return customer;
   }
 
-  async update(id: string, updateCustomerDto: UpdateCustomerDto) {
+  async update(id: string, updateCustomerDto: UpdateCustomerDto, tenantId?: string) {
     if (!id) throw new BadRequestException('customerId is required');
-    await this.findOne(id);
+    await this.findOne(id, tenantId);
+
     return this.prismaService.customer.update({
       where: { id },
       data: updateCustomerDto,
     });
   }
 
-  async remove(id: string) {
+  async remove(id: string, tenantId?: string) {
     if (!id) throw new BadRequestException('customerId is required');
-    await this.findOne(id);
+    await this.findOne(id, tenantId);
+
     return this.prismaService.customer.delete({
       where: { id },
     });

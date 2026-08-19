@@ -19,6 +19,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
         return 'INTERNAL_ERROR';
     }
   }
+  //ArgumentsHost allows filter to be used in HTTP context (or WebSocket, RPC contexts if needed).
   catch(exception: unknown, host: ArgumentsHost) {
     const context = host.switchToHttp();
     const response = context.getResponse();
@@ -26,7 +27,16 @@ export class HttpExceptionFilter implements ExceptionFilter {
     let message = 'Internal server error';
     let errors = null;
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
-
+    //If exception is Nest HttpException,
+    // use exception.getResponse() to pull out structured data thrown earlier
+    // (like BadRequestException({errors: [...]})).
+    //     {
+    //   "success": false,
+    //   "statusCode": 400,
+    //   "message": "Validation failed",
+    //   "errorCode": "VALIDATION_ERROR",
+    //   "errors": [...]
+    // }
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const exceptionResponse: any = exception.getResponse();
@@ -43,7 +53,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       success: false,
       statusCode: status,
       message,
-      errorCode:this.mapErrorCode(status),
+      errorCode: this.mapErrorCode(status),
       errors,
     });
   }

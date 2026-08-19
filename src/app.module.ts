@@ -5,31 +5,29 @@ import { InvoiceModule } from './invoice/invoice.module.js';
 import { CustomerModule } from './customer/customer.module.js';
 import { UserModule } from './user/user.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
-import { config } from 'dotenv';
 import { ConfigModule } from '@nestjs/config';
 import { ApiKeyMiddleware } from './common/middleware/api-key.middleware.js';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware.js';
-import { IdempotencyService } from './common/idempotency/idempotency.service.js';
-import { AuthModule } from './auth/auth.module';
+import { AuthModule } from './auth/auth.module.js';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    PrismaModule,
+    AuthModule,
     InvoiceModule,
     CustomerModule,
     UserModule,
-    PrismaModule,
-    AuthModule,
   ],
   controllers: [AppController],
-  providers: [AppService,IdempotencyService],
+  providers: [AppService],
 })
 export class AppModule implements NestModule {
-  //Class-based middleware needs Dependency Injection, so it's wired through configure() — not app.use():
+  // Class-based middleware needs Dependency Injection, so it's wired through configure() — not app.use()
   configure(consumer: MiddlewareConsumer) {
     consumer.apply(ApiKeyMiddleware).forRoutes();
-    consumer.apply(RequestIdMiddleware).forRoutes("*")
+    consumer.apply(RequestIdMiddleware).forRoutes('*');
   }
 }

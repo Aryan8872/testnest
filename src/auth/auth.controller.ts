@@ -1,34 +1,43 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { CreateAuthDto } from './dto/create-auth.dto';
-import { UpdateAuthDto } from './dto/update-auth.dto';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  UseGuards,
+  Req,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import { AuthService } from './auth.service.js';
+import { LoginDto } from './dto/login.dto.js';
+import { RegisterDto } from './dto/register.dto.js';
+import { AuthGuard } from '@nestjs/passport';
+import { JwtAuthGuard } from '../common/guards/authguard/jwt-auth.guard.js';
+import { CurrentUser, type AuthenticatedUser } from '../decorators/current-user.decorator.js';
+import { Public } from '../decorators/public.decorator.js';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post()
-  create(@Body() createAuthDto: CreateAuthDto) {
-    return this.authService.create(createAuthDto);
+  @Public()
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  async register(@Body() registerDto: RegisterDto) {
+    return this.authService.register(registerDto);
   }
 
-  @Get()
-  findAll() {
-    return this.authService.findAll();
+  @Public()
+  @UseGuards(AuthGuard('local'))
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  async login(@Body() _loginDto: LoginDto, @Req() req: any) {
+    return this.authService.login(req.user);
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.authService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAuthDto: UpdateAuthDto) {
-    return this.authService.update(+id, updateAuthDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.authService.remove(+id);
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  async getProfile(@CurrentUser() user: AuthenticatedUser) {
+    return this.authService.getProfile(user.id);
   }
 }

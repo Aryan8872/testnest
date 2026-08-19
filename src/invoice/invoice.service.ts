@@ -16,44 +16,54 @@ export class InvoiceService {
     private readonly prismaService: PrismaService,
     private readonly idempotencyService: IdempotencyService,
   ) {}
+
   async createInvoice(
     dto: CreateInvoiceDTO,
     idempotencyKey: string,
     ownerType?: string,
     ownerId?: string,
+    tenantId?: string,
   ) {
     if (!idempotencyKey)
       throw new BadRequestException('idempotency key is required');
-    const requestHash = computeRequestHash('POST', 'api/v1/invoice/new', dto);
+
+    const effectiveTenantId = tenantId || ownerId;
+    if (!effectiveTenantId) {
+      throw new BadRequestException('tenant context is required');
+    }
+
+    const requestHash = computeRequestHash(
+      'POST',
+      'api/v1/invoice/new',
+      dto,
+      effectiveTenantId,
+    );
+
     const claim = await this.idempotencyService.claimKeyIfNotExists(
       idempotencyKey,
       requestHash,
+      ownerType,
+      effectiveTenantId,
     );
-    //if not created returns the existing record from the db, now we need to check the hash
+
     if (!claim.created) {
       const record = claim.record;
       if (record?.status === 'DONE') {
         if (record?.requestHash !== requestHash) {
-          //we cant use the same key twice for 2 different request so we throw exception
           throw new ConflictException({
-            errorCode: 'IDEMPOTENCY_KEY_CONFLIC',
-            message: 'idempotency key used in diffrent request',
+            errorCode: 'IDEMPOTENCY_KEY_CONFLICT',
+            message: 'Idempotency key used with a different request payload',
           });
         }
-        //if the hash are the same we return the existing response we got from the table
         return record.response;
       }
       if (record?.status === 'PROCESSING') {
-        // the request is processing
         throw new ConflictException({
           errorCode: 'IDEMPOTENCY_IN_PROGRESS',
-          message: 'request with this key is in process',
+          message: 'Request with this key is already in process',
         });
       }
     }
-
-    // If we are here: we created the idempotency record => we must process and update record atomically.
-    // Use a single transaction to create customer/invoice and then mark done
 
     const { amount, due_date, customerData, customerId, status } = dto;
 
@@ -63,7 +73,7 @@ export class InvoiceService {
         if (!customerData) {
           throw new BadRequestException({
             errorCode: 'INVALID_REQUEST',
-            message: 'at least customer id or the customer data is required',
+            message: 'At least customerId or customerData is required',
           });
         }
         try {
@@ -72,6 +82,7 @@ export class InvoiceService {
               email: customerData.email,
               fullName: customerData.fullName,
               phoneNumber: customerData.phoneNumber,
+              tenant_id: effectiveTenantId,
             },
           });
           usedCustomerId = created.id;
@@ -80,11 +91,13 @@ export class InvoiceService {
             e instanceof Prisma.PrismaClientKnownRequestError &&
             e.code === 'P2002'
           ) {
-            const existing = await prisma.customer.findUnique({
-              where: { email: customerData.email },
+            const existing = await prisma.customer.findFirst({
+              where: {
+                email: customerData.email,
+                tenant_id: effectiveTenantId,
+              },
             });
             if (!existing) {
-              //rethrow to be handled by global exception filter
               throw e;
             }
             usedCustomerId = existing?.id;
@@ -93,22 +106,24 @@ export class InvoiceService {
           }
         }
       } else {
-        const exists = await prisma.customer.findUnique({
-          where: { id: customerId },
+        const exists = await prisma.customer.findFirst({
+          where: { id: customerId, tenant_id: effectiveTenantId },
         });
         if (!exists) {
           throw new NotFoundException({
             errorCode: 'CUSTOMER_NOT_FOUND',
-            message: 'Provided customerId was not found',
+            message: 'Provided customerId was not found in your organization',
           });
         }
       }
+
       const createdInvoice = await prisma.invoice.create({
         data: {
           amount: Math.round(amount),
           due_date: new Date(due_date),
           customerId: usedCustomerId!,
           status: status,
+          tenant_id: effectiveTenantId,
         },
       });
       return createdInvoice;
@@ -122,4 +137,3 @@ export class InvoiceService {
     return invoice;
   }
 }
-
