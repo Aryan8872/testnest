@@ -1,4 +1,4 @@
-import { LoggingInterceptor } from './logging.interceptor';
+import { LoggingInterceptor } from './logging.interceptor.js';
 
 describe('LoggingInterceptor', () => {
   it('should be defined', () => {

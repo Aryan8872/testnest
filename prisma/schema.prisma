@@ -19,6 +19,24 @@ enum INVOICESTATUS {
   CANCELLED
 }
 
+enum USERROLE {
+  SUPERADMIN
+  ADMIN
+  BILLING
+}
+
+enum TENANTSTATUS {
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum IDEMPOTENCYSTATUS {
+  PROCESSING
+  DONE
+  FAILED
+}
+
 model Invoice {
   id         String        @id @default(cuid())
   amount     Int
@@ -29,6 +47,21 @@ model Invoice {
   status     INVOICESTATUS @default(DRAFT)
   customer   Customer      @relation(references: [id], fields: [customerId])
   payments   Payment[]
+  tenant_id  String
+  tenant     Tenant        @relation(fields: [tenant_id], references: [id])
+}
+
+model Tenant {
+  id         String       @id
+  fullName   String       @unique
+  email      String
+  created_at DateTime     @default(now())
+  updated_at DateTime     @updatedAt
+  customers  Customer[]
+  users      User[]
+  status     TENANTSTATUS @default(ACTIVE)
+  payments   Payment[]
+  invoices   Invoice[]
 }
 
 model Payment {
@@ -38,16 +71,23 @@ model Payment {
   customer_id  String
   customer     Customer @relation(fields: [customer_id], references: [id])
   payment_date DateTime @default(now())
+  tenant_id    String
+  tenant       Tenant   @relation(fields: [tenant_id], references: [id])
 }
 
 model Customer {
   id          String    @id @default(cuid())
-  name        String
-  email       String
+  fullName    String
+  email       String    @unique()
   phoneNumber String
   created_at  DateTime  @default(now())
   invoices    Invoice[]
   payments    Payment[]
+  tenant_id   String
+  tenant      Tenant    @relation(fields: [tenant_id], references: [id])
+
+  @@unique([tenant_id, email])
+  @@index([tenant_id, created_at])
 }
 
 model User {
@@ -55,7 +95,23 @@ model User {
   fullName    String
   email       String
   phoneNumber String
+  role        USERROLE @default(BILLING)
   created_at  DateTime @default(now())
   updated_at  DateTime @updatedAt
   is_enabled  Boolean  @default(true)
+  tenant_id   String
+  tenant      Tenant   @relation(fields: [tenant_id], references: [id])
+}
+
+model Idempotencykey {
+  key         String            @id
+  requestHash String
+  ownerType   String?
+  ownerId     String?
+  status      IDEMPOTENCYSTATUS
+  response    Json?
+  created_at  DateTime          @default(now())
+  updated_at  DateTime          @updatedAt
+
+  @@index([ownerId, ownerType])
 }

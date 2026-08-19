@@ -9,6 +9,8 @@ import {
 import { GlobalExceptionFilter } from './common/filters/global-exception-filter.js';
 import { LoggingInterceptor } from './common/interceptor/logging/logging.interceptor.js';
 import { ResponseInterceptor } from './common/interceptor/response/response.interceptor.js';
+import { IdempotencyInterceptor } from './common/interceptor/idempotency/idempotency.interceptor.js';
+import { IdempotencyService } from './common/idempotency/idempotency.service.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -39,6 +41,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(
     new LoggingInterceptor(),
     new ResponseInterceptor(),
+    new IdempotencyInterceptor(app.get(IdempotencyService))
   );
   app.useGlobalFilters(new GlobalExceptionFilter());
   await app.listen(process.env.PORT ?? 3000);

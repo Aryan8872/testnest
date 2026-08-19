@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+} from '@nestjs/common';
 import { UserService } from './user.service.js';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
@@ -7,14 +16,14 @@ import { UpdateUserDto } from './dto/update-user.dto.js';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Post("new")
+  @Post('new')
   async create(@Body() createUserDto: CreateUserDto) {
     return await this.userService.create(createUserDto);
   }
 
-  @Get()
-  findAll() {
-    return this.userService.findAll();
+  @Get('all')
+  findAll(@Query('page') page?: number, @Query('limit') limit?: number) {
+    return this.userService.findAll(page, limit);
   }
 
   @Get(':id')
@@ -29,6 +38,6 @@ export class UserController {
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.userService.remove(+id);
+    return this.userService.remove(id);
   }
 }

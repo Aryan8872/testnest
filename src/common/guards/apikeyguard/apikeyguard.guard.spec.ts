@@ -1,7 +1,7 @@
-import { ApikeyguardGuard } from './apikeyguard.guard';
+import { ApikeyguardGuard } from './apikeyguard.guard.js';
 
 describe('ApikeyguardGuard', () => {
   it('should be defined', () => {
-    expect(new ApikeyguardGuard()).toBeDefined();
+    expect(new ApikeyguardGuard({} as any)).toBeDefined();
   });
 });

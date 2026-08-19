@@ -9,9 +9,9 @@ import {
 
 import type { Request, Response } from 'express';
 
-import { Prisma } from '../../generated/prisma/client.js';
 
 import type { RequestWithId } from '../middleware/request-id.middleware.js';
+import { Prisma } from '@prisma/client';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {

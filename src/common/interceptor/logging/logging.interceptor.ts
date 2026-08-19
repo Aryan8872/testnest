@@ -25,7 +25,7 @@ export class LoggingInterceptor implements NestInterceptor {
           const durationMs = Math.round(performance.now() - start);
           this.logger.log(
             JSON.stringify({
-              event: 'http.request.failed',
+              event: 'http.request.success',
               requestId,
               method,
               path: originalUrl,
