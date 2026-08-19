@@ -41,7 +41,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(
     new LoggingInterceptor(),
     new ResponseInterceptor(),
-    new IdempotencyInterceptor(app.get(IdempotencyService))
+    new IdempotencyInterceptor(app.get(IdempotencyService)),
   );
   app.useGlobalFilters(new GlobalExceptionFilter());
   await app.listen(process.env.PORT ?? 3000);
