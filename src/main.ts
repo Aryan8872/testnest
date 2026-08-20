@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/node';
+import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
 import {
@@ -13,6 +15,24 @@ import { IdempotencyInterceptor } from './common/interceptor/idempotency/idempot
 import { IdempotencyService } from './common/idempotency/idempotency.service.js';
 
 async function bootstrap() {
+  Sentry.init({
+    dsn: 'https://3074667d9b8737b7fb9139cc97b51208@o4511942670548992.ingest.de.sentry.io/4511944176631888',
+    integrations: [nodeProfilingIntegration()],
+    // Send structured logs to Sentry
+    enableLogs: true,
+    // Tracing
+    tracesSampleRate: 1.0, //  Capture 100% of the transactions
+    // Set sampling rate for profiling - this is evaluated only once per SDK.init call
+    profileSessionSampleRate: 1.0,
+    // Trace lifecycle automatically enables profiling during active traces
+    profileLifecycle: 'trace',
+    dataCollection: {
+      // To disable sending user data and HTTP bodies, uncomment the lines below. For more info visit:
+      // https://docs.sentry.io/platforms/javascript/guides/node/configuration/options/#dataCollection
+      // userInfo: false,
+      // httpBodies: [],
+    },
+  });
   const app = await NestFactory.create(AppModule);
   app.enableVersioning({
     type: VersioningType.URI,

@@ -52,9 +52,10 @@ model Invoice {
 }
 
 model Tenant {
-  id         String       @id
+  id         String       @id @default(cuid())
   fullName   String       @unique
   email      String
+  phoneNumber String
   created_at DateTime     @default(now())
   updated_at DateTime     @updatedAt
   customers  Customer[]

@@ -37,7 +37,7 @@ export function AtLeastOneOf(
     // register a validation on a fake property name on the prototype
     registerDecorator({
       name: 'AtLeastOneOf',
-      target: constructor.prototype,
+      target: constructor,
       propertyName: '__atLeastOneOf__', // arbitrary property name
       options: validationOptions,
       constraints: properties,

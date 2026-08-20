@@ -19,12 +19,12 @@ import { CurrentTenant } from '../decorators/current-tenant.decorator.js';
 import { USERROLE } from '@prisma/client';
 
 @Controller('user')
-@UseGuards(JwtAuthGuard, RoleGuard)
+// @UseGuards(JwtAuthGuard, RoleGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post('new')
-  @Roles(USERROLE.ADMIN, USERROLE.SUPERADMIN)
+  // @Roles(USERROLE.ADMIN, USERROLE.SUPERADMIN)
   async create(
     @Body() createUserDto: CreateUserDto,
     @CurrentTenant() tenantId: string,

@@ -1,3 +1,4 @@
+import * as Sentry from '@sentry/node';
 import {
   ArgumentsHost,
   Catch,
@@ -9,7 +10,6 @@ import {
 
 import type { Request, Response } from 'express';
 
-
 import type { RequestWithId } from '../middleware/request-id.middleware.js';
 import { Prisma } from '@prisma/client';
 
@@ -20,8 +20,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
 
-    const request =
-      ctx.getRequest<RequestWithId & Request>();
+    const request = ctx.getRequest<RequestWithId & Request>();
 
     const response = ctx.getResponse<Response>();
 
@@ -63,9 +62,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
 
       const exceptionResponse = exception.getResponse();
 
-      const formatted = this.normalizeHttpException(
-        exceptionResponse,
-      );
+      const formatted = this.normalizeHttpException(exceptionResponse);
 
       response.status(statusCode).json({
         success: false,
@@ -90,14 +87,23 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         path: request.originalUrl,
         method: request.method,
         error:
-          exception instanceof Error
-            ? exception.message
-            : String(exception),
+          exception instanceof Error ? exception.message : String(exception),
       }),
-      exception instanceof Error
-        ? exception.stack
-        : undefined,
+      exception instanceof Error ? exception.stack : undefined,
     );
+
+    // Capture the error in Sentry
+    Sentry.captureException(exception, {
+      tags: {
+        path: request.url,
+      },
+      user: (request as any)?.user
+        ? {
+            id: (request as any)?.user?.id,
+            tenantId: (request as any)?.user?.tenantId,
+          }
+        : undefined,
+    });
 
     response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       success: false,
@@ -109,9 +115,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     });
   }
 
-  private handlePrismaError(
-    exception: Prisma.PrismaClientKnownRequestError,
-  ) {
+  private handlePrismaError(exception: Prisma.PrismaClientKnownRequestError) {
     switch (exception.code) {
       /*
        * Unique constraint violation
@@ -152,9 +156,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     }
   }
 
-  private normalizeHttpException(
-    exceptionResponse: string | object,
-  ) {
+  private normalizeHttpException(exceptionResponse: string | object) {
     if (typeof exceptionResponse === 'string') {
       return {
         errorCode: 'HTTP_ERROR',

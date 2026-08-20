@@ -15,6 +15,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/adapters/handlebars.adapter';
 import { PdfModule } from './common/pdf/pdf.module.js';
 import { PdfService } from './common/pdf/pdf.service.js';
+import { TenantModule } from './tenant/tenant.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -56,6 +57,7 @@ import { PdfService } from './common/pdf/pdf.service.js';
         },
       },
     }),
+    TenantModule,
   ],
   controllers: [AppController],
   providers: [AppService, PdfService],
