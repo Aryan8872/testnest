@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <style>
+    body { font-family: 'Helvetica', Arial, sans-serif; color: #333; margin: 0; padding: 0; }
+    .header { background-color: #0056b3; color: white; padding: 30px; text-align: center; }
+    .logo { font-size: 28px; font-weight: bold; letter-spacing: 2px; }
+    .content { padding: 40px; }
+    h2 { color: #0056b3; }
+    .details { margin-top: 20px; line-height: 1.6; }
+    .details strong { width: 120px; display: inline-block; }
+    .total-box { margin-top: 40px; padding: 20px; background-color: #f8f9fa; border-left: 5px solid #0056b3; }
+    .total-box .total { font-size: 22px; font-weight: bold; color: #0056b3; margin: 0; }
+    .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #888; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo">INVOICE</div>
+  </div>
+  <div class="content">
+    <h2>Hello {{customer.fullName}},</h2>
+    <p>Thank you for your business. Here are your invoice details:</p>
+    
+    <div class="details">
+      <p><strong>Invoice ID:</strong> {{id}}</p>
+      <p><strong>Status:</strong> {{status}}</p>
+      <p><strong>Due Date:</strong> {{due_date}}</p>
+    </div>
+
+    <div class="total-box">
+      <p class="total">Total Amount: ${{amount}}</p>
+    </div>
+    
+    <div class="footer">
+      <p>If you have any questions about this invoice, please contact support.</p>
+    </div>
+  </div>
+</body>
+</html>

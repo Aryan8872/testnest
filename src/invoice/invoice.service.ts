@@ -4,6 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { CreateInvoiceDTO } from './dto/create-invoice-dto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { Prisma } from '@prisma/client';
@@ -15,6 +17,7 @@ export class InvoiceService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly idempotencyService: IdempotencyService,
+    @InjectQueue('invoice-queue') private readonly invoiceQueue: Queue,
   ) {}
 
   async createInvoice(
@@ -134,6 +137,36 @@ export class InvoiceService {
       body: invoice,
     });
 
+    // Dispatch background job for async processing (e.g. generating PDF, sending email)
+    // By offloading this to BullMQ, the HTTP request completes instantly.
+    await this.invoiceQueue.add(
+      'generate-and-send-invoice',
+      {
+        invoiceId: invoice.id,
+        customerEmail: customerData?.email || 'customer@example.com',
+        tenantId: invoice.tenant_id,
+      },
+      {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 1000 },
+      },
+    );
+
+    return invoice;
+  }
+
+  async getInvoiceByCustomerEmail(email: string, tenantId: string) {
+    const invoice = await this.prismaService.invoice.findFirst({
+      where: {
+        tenant_id: tenantId,
+        customer: {
+          email: email,
+        },
+      },
+      include: {
+        customer: true,
+      },
+    });
     return invoice;
   }
 }
