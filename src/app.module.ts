@@ -16,12 +16,33 @@ import { HandlebarsAdapter } from '@nestjs-modules/mailer/adapters/handlebars.ad
 import { PdfModule } from './common/pdf/pdf.module.js';
 import { PdfService } from './common/pdf/pdf.service.js';
 import { TenantModule } from './tenant/tenant.module.js';
+import { LoggerModule } from 'nestjs-pino';
+import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
     }),
     PrismaModule,
+    LoggerModule.forRoot({
+      pinoHttp: {
+        // Automatically attach our requestId to every log
+        customProps: (req: any, res: any) => ({
+          requestId: req['requestId'],
+        }),
+        // Use pino-pretty to make JSON readable on your local machine
+        transport:
+          process.env.NODE_ENV !== 'production'
+            ? { target: 'pino-pretty', options: { singleLine: true } }
+            : undefined,
+      },
+    }),
+    PrometheusModule.register({
+      path: '/metrics',
+      defaultMetrics: {
+        enabled: true,
+      },
+    }),
     BullModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({

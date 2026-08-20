@@ -9,10 +9,11 @@ import {
 } from '@nestjs/common';
 
 import { GlobalExceptionFilter } from './common/filters/global-exception-filter.js';
-import { LoggingInterceptor } from './common/interceptor/logging/logging.interceptor.js';
+// import { LoggingInterceptor } from './common/interceptor/logging/logging.interceptor.js';
 import { ResponseInterceptor } from './common/interceptor/response/response.interceptor.js';
 import { IdempotencyInterceptor } from './common/interceptor/idempotency/idempotency.interceptor.js';
 import { IdempotencyService } from './common/idempotency/idempotency.service.js';
+import { Logger } from 'nestjs-pino';
 
 async function bootstrap() {
   Sentry.init({
@@ -34,6 +35,8 @@ async function bootstrap() {
     },
   });
   const app = await NestFactory.create(AppModule);
+  // Override the default logger with Pino
+  app.useLogger(app.get(Logger));
   app.enableVersioning({
     type: VersioningType.URI,
   });
@@ -59,7 +62,7 @@ async function bootstrap() {
     }),
   );
   app.useGlobalInterceptors(
-    new LoggingInterceptor(),
+    // new LoggingInterceptor(),
     new ResponseInterceptor(),
     new IdempotencyInterceptor(app.get(IdempotencyService)),
   );
