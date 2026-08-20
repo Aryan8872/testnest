@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -117,6 +116,7 @@ export class AuthService {
             id: `tenant_${randomUUID()}`,
             fullName: tenantName,
             email: normalizedEmail,
+            phoneNumber: dto.phoneNumber,
             status: 'ACTIVE',
           },
         });
