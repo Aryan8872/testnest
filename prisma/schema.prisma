@@ -52,17 +52,17 @@ model Invoice {
 }
 
 model Tenant {
-  id         String       @id @default(cuid())
-  fullName   String       @unique
-  email      String
+  id          String       @id @default(cuid())
+  fullName    String
+  email       String       @unique
   phoneNumber String
-  created_at DateTime     @default(now())
-  updated_at DateTime     @updatedAt
-  customers  Customer[]
-  users      User[]
-  status     TENANTSTATUS @default(ACTIVE)
-  payments   Payment[]
-  invoices   Invoice[]
+  created_at  DateTime     @default(now())
+  updated_at  DateTime     @updatedAt
+  customers   Customer[]
+  users       User[]
+  status      TENANTSTATUS @default(ACTIVE)
+  payments    Payment[]
+  invoices    Invoice[]
 }
 
 model Payment {
@@ -94,8 +94,8 @@ model Customer {
 model User {
   id          String   @id @default(cuid())
   fullName    String
-  email       String @unique
-  password    String 
+  email       String   @unique
+  password    String
   phoneNumber String
   role        USERROLE @default(BILLING)
   created_at  DateTime @default(now())

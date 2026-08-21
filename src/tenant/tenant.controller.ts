@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { TenantService } from './tenant.service.js';
 import { CreateTenantDto } from './dto/create-tenant.dto.js';
@@ -15,19 +16,19 @@ import { UpdateTenantDto } from './dto/update-tenant.dto.js';
 export class TenantController {
   constructor(private readonly tenantService: TenantService) {}
 
-  @Post()
+  @Post('/new')
   create(@Body() createTenantDto: CreateTenantDto) {
     return this.tenantService.create(createTenantDto);
   }
 
   @Get()
-  findAll() {
-    return this.tenantService.findAll();
+  findAll(@Query('page') page: number, @Query('limit') limit: number) {
+    return this.tenantService.findAll(page, limit);
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.tenantService.findOne(+id);
+    return this.tenantService.findOne(id);
   }
 
   @Patch(':id')
