@@ -10,7 +10,6 @@ import { ApiKeyMiddleware } from './common/middleware/api-key.middleware.js';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware.js';
 import { AuthModule } from './auth/auth.module.js';
 import { BullModule } from '@nestjs/bullmq';
-import { ConfigService } from '@nestjs/config';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/adapters/handlebars.adapter';
 import { PdfModule } from './common/pdf/pdf.module.js';
@@ -18,6 +17,7 @@ import { PdfService } from './common/pdf/pdf.service.js';
 import { TenantModule } from './tenant/tenant.module.js';
 import { LoggerModule } from 'nestjs-pino';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
+import { getRedisConnection } from './common/redis/redis.connection.js';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -45,13 +45,9 @@ import { PrometheusModule } from '@willsoto/nestjs-prometheus';
     }),
     BullModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: async (configService: ConfigService) => ({
-        connection: {
-          host: configService.get<string>('REDIS_HOST', 'localhost'),
-          port: configService.get<number>('REDIS_PORT', 6379),
-        },
+      useFactory: async () => ({
+        connection: getRedisConnection(),
       }),
-      inject: [ConfigService],
     }),
     AuthModule,
     InvoiceModule,
