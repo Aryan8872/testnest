@@ -17,6 +17,7 @@ import { RoleGuard } from '../common/guards/rolekeyguard/role.guard.js';
 import { Roles } from '../decorators/roles.decorator.js';
 import { CurrentTenant } from '../decorators/current-tenant.decorator.js';
 import { USERROLE } from '@prisma/client';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 
 @Controller('user')
 // @UseGuards(JwtAuthGuard, RoleGuard)
@@ -36,10 +37,9 @@ export class UserController {
   @Roles(USERROLE.ADMIN, USERROLE.SUPERADMIN)
   findAll(
     @CurrentTenant() tenantId: string,
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Query() paginationQueryDto: PaginationQueryDto,
   ) {
-    return this.userService.findAll(tenantId, page, limit);
+    return this.userService.findAll(tenantId, paginationQueryDto);
   }
 
   @Get(':id')

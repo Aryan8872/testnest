@@ -2,8 +2,10 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Get,
   HttpCode,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -11,7 +13,12 @@ import { InvoiceService } from './invoice.service.js';
 import { CreateInvoiceDTO } from './dto/create-invoice-dto.js';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../common/guards/authguard/jwt-auth.guard.js';
-import { CurrentUser, type AuthenticatedUser } from '../decorators/current-user.decorator.js';
+import {
+  CurrentUser,
+  type AuthenticatedUser,
+} from '../decorators/current-user.decorator.js';
+import { CurrentTenant } from '../decorators/current-tenant.decorator.js';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 
 @Controller('invoice')
 @UseGuards(JwtAuthGuard)
@@ -45,5 +52,12 @@ export class InvoiceController {
       tenantId,
     );
     return result;
+  }
+  @Get('/all')
+  findAllInvoice(
+    @CurrentTenant() tenantId: string,
+    @Query() paginationQueryDto: PaginationQueryDto,
+  ) {
+    return this.invoiceService.findAll(tenantId, paginationQueryDto);
   }
 }

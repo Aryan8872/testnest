@@ -14,6 +14,7 @@ import { CreateCustomerDto } from './dto/create-customer.dto.js';
 import { UpdateCustomerDto } from './dto/update-customer.dto.js';
 import { JwtAuthGuard } from '../common/guards/authguard/jwt-auth.guard.js';
 import { CurrentTenant } from '../decorators/current-tenant.decorator.js';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 
 @Controller('customer')
 @UseGuards(JwtAuthGuard)
@@ -31,17 +32,13 @@ export class CustomerController {
   @Get()
   findAll(
     @CurrentTenant() tenantId: string,
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Query() paginationQueryDto: PaginationQueryDto,
   ) {
-    return this.customerService.findAll(tenantId, page, limit);
+    return this.customerService.findAll(tenantId, paginationQueryDto);
   }
 
   @Get(':id')
-  findOne(
-    @Param('id') id: string,
-    @CurrentTenant() tenantId: string,
-  ) {
+  findOne(@Param('id') id: string, @CurrentTenant() tenantId: string) {
     return this.customerService.findOne(id, tenantId);
   }
 
@@ -55,10 +52,7 @@ export class CustomerController {
   }
 
   @Delete(':id')
-  remove(
-    @Param('id') id: string,
-    @CurrentTenant() tenantId: string,
-  ) {
+  remove(@Param('id') id: string, @CurrentTenant() tenantId: string) {
     return this.customerService.remove(id, tenantId);
   }
 }

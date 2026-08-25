@@ -6,6 +6,9 @@ import {
 import { CreateCustomerDto } from './dto/create-customer.dto.js';
 import { UpdateCustomerDto } from './dto/update-customer.dto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
+import { PaginationResponseDto } from '../common/dto/pagination-response.dto.js';
+import { Customer } from '@prisma/client';
 
 @Injectable()
 export class CustomerService {
@@ -22,18 +25,17 @@ export class CustomerService {
     });
   }
 
-  async findAll(tenantId?: string, page = 1, limit = 20) {
-    const pageNum = Number(page) || 1;
-    const limitNum = Number(limit) || 20;
-    const skip = (pageNum - 1) * limitNum;
-
+  async findAll(
+    tenantId: string,
+    paginationQueryDto: PaginationQueryDto,
+  ): Promise<PaginationResponseDto<Customer>> {
     const whereClause = tenantId ? { tenant_id: tenantId } : {};
 
     const [customers, total] = await this.prismaService.$transaction([
       this.prismaService.customer.findMany({
         where: whereClause,
-        take: limitNum,
-        skip: skip,
+        take: paginationQueryDto.take,
+        skip: paginationQueryDto.skip,
         orderBy: {
           created_at: 'desc',
         },
@@ -41,15 +43,12 @@ export class CustomerService {
       this.prismaService.customer.count({ where: whereClause }),
     ]);
 
-    return {
-      items: customers,
-      meta: {
-        page: pageNum,
-        limit: limitNum,
-        total,
-        totalPages: Math.ceil(total / limitNum),
-      },
-    };
+    return new PaginationResponseDto(
+      customers,
+      total,
+      paginationQueryDto.page,
+      paginationQueryDto.limit,
+    );
   }
 
   async findOne(id: string, tenantId?: string) {
@@ -65,7 +64,11 @@ export class CustomerService {
     return customer;
   }
 
-  async update(id: string, updateCustomerDto: UpdateCustomerDto, tenantId?: string) {
+  async update(
+    id: string,
+    updateCustomerDto: UpdateCustomerDto,
+    tenantId?: string,
+  ) {
     if (!id) throw new BadRequestException('customerId is required');
     await this.findOne(id, tenantId);
 

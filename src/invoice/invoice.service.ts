@@ -8,9 +8,11 @@ import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { CreateInvoiceDTO } from './dto/create-invoice-dto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { Prisma } from '@prisma/client';
+import { Invoice, Prisma } from '@prisma/client';
 import { computeRequestHash } from '../common/idempotency/hash.js';
 import { IdempotencyService } from '../common/idempotency/idempotency.service.js';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
+import { PaginationResponseDto } from '../common/dto/pagination-response.dto.js';
 
 @Injectable()
 export class InvoiceService {
@@ -168,5 +170,34 @@ export class InvoiceService {
       },
     });
     return invoice;
+  }
+
+  async findAll(
+    tenantId: string,
+    paginationQueryDto: PaginationQueryDto,
+  ): Promise<PaginationResponseDto<Invoice>> {
+    const whereClause = tenantId ? { tenant_id: tenantId } : {};
+    const [invoices, total] = await this.prismaService.$transaction([
+      this.prismaService.invoice.findMany({
+        where: whereClause,
+        skip: paginationQueryDto.skip,
+        take: paginationQueryDto.take,
+        include: {
+          payments: true,
+          customer: true,
+        },
+        orderBy: {
+          created_at: 'desc',
+        },
+      }),
+      this.prismaService.invoice.count({ where: whereClause }),
+    ]);
+
+    return new PaginationResponseDto(
+      invoices,
+      total,
+      paginationQueryDto.page,
+      paginationQueryDto.limit,
+    );
   }
 }

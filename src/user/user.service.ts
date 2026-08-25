@@ -8,6 +8,9 @@ import { CreateUserDto } from './dto/create-user.dto.js';
 import { UpdateUserDto } from './dto/update-user.dto.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import bcrypt from 'bcrypt';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
+import { PaginationResponseDto } from '../common/dto/pagination-response.dto.js';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class UserService {
@@ -46,23 +49,10 @@ export class UserService {
     return safeUser;
   }
 
-  async findAll(tenantId?: string, page = 1, limit = 20) {
-    const pageNum = Number(page) || 1;
-    const limitNum = Number(limit) || 20;
-
-    if (pageNum < 1) {
-      throw new BadRequestException({
-        errorCode: 'INVALID_PAGE',
-        message: 'page number must be greater than 0',
-      });
-    }
-    if (limitNum < 1 || limitNum > 100) {
-      throw new BadRequestException({
-        errorCode: 'INVALID_LIMIT',
-        message: 'limit must be greater than 0 and less than 100',
-      });
-    }
-    const skip = (pageNum - 1) * limitNum;
+  async findAll(
+    tenantId: string,
+    paginationQueryDto: PaginationQueryDto,
+  ): Promise<PaginationResponseDto<Partial<User>>> {
     const whereClause = tenantId ? { tenant_id: tenantId } : {};
 
     const [users, total] = await this.prismaService.$transaction([
@@ -79,23 +69,20 @@ export class UserService {
           updated_at: true,
           tenant_id: true,
         },
-        take: limitNum,
-        skip: skip,
+        take: paginationQueryDto.take,
+        skip: paginationQueryDto.skip,
         orderBy: {
           created_at: 'desc',
         },
       }),
       this.prismaService.user.count({ where: whereClause }),
     ]);
-    return {
-      items: users,
-      meta: {
-        page: pageNum,
-        limit: limitNum,
-        total,
-        totalPages: Math.ceil(total / limitNum),
-      },
-    };
+    return new PaginationResponseDto(
+      users,
+      total,
+      paginationQueryDto.page,
+      paginationQueryDto.limit,
+    );
   }
 
   async findOne(id: string, tenantId?: string) {
