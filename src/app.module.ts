@@ -22,6 +22,8 @@ import { getRedisConnection } from './common/redis/redis.connection.js';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
+import { CacheModule } from '@nestjs/cache-manager';
+import { createKeyv } from '@keyv/redis';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -37,6 +39,18 @@ import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis'
         storage: new ThrottlerStorageRedisService(
           new Redis(getRedisConnection() as RedisOptions),
         ),
+      }),
+    }),
+    CacheModule.registerAsync({
+      isGlobal: true,
+      useFactory: async () => ({
+        stores: [
+          createKeyv(
+            process.env.REDIS_URL ||
+              `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`,
+          ),
+        ],
+        ttl: 60 * 1000, // 1minute default
       }),
     }),
     PrismaModule,

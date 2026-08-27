@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -9,8 +10,10 @@ import bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { RegisterDto } from './dto/register.dto.js';
-import { USERROLE } from '@prisma/client';
+import { User, USERROLE } from '@prisma/client';
 import { randomUUID } from 'crypto';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 @Injectable()
 export class AuthService {
@@ -18,6 +21,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
 
   async validateUser(email: string, pass: string) {
@@ -150,28 +154,37 @@ export class AuthService {
   }
 
   async getProfile(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      include: {
-        tenant: {
-          select: {
-            id: true,
-            fullName: true,
-            email: true,
-            status: true,
+    const cachedData = await this.cacheManager.get(`user:profile:${userId}`);
+    if (!cachedData) {
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          tenant: {
+            select: {
+              id: true,
+              fullName: true,
+              email: true,
+              status: true,
+            },
           },
         },
-      },
-    });
-
-    if (!user) {
-      throw new NotFoundException({
-        errorCode: 'USER_NOT_FOUND',
-        message: 'User profile not found',
       });
+      if (!user) {
+        throw new NotFoundException({
+          errorCode: 'USER_NOT_FOUND',
+          message: 'User profile not found',
+        });
+      }
+      const { password, ...safeUser } = user;
+      await this.cacheManager.set(
+        `user:profile:${userId}`,
+        safeUser,
+        60 * 60 * 24,
+      );
+
+      return safeUser;
     }
 
-    const { password, ...safeUser } = user;
-    return safeUser;
+    return cachedData as User;
   }
 }

@@ -21,8 +21,10 @@
     "test:e2e": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config ./test/jest-e2e.json --forceExit"
   },
   "dependencies": {
+    "@keyv/redis": "^5.1.6",
     "@nest-lab/throttler-storage-redis": "^1.2.0",
     "@nestjs/bullmq": "^11.0.5",
+    "@nestjs/cache-manager": "^12.0.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.1",
@@ -37,6 +39,7 @@
     "@willsoto/nestjs-prometheus": "^6.1.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^6.1.2",
+    "cache-manager": "^7.2.9",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "helmet": "^8.3.0",
