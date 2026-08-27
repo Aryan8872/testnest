@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -13,6 +14,8 @@ import { computeRequestHash } from '../common/idempotency/hash.js';
 import { IdempotencyService } from '../common/idempotency/idempotency.service.js';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 import { PaginationResponseDto } from '../common/dto/pagination-response.dto.js';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 @Injectable()
 export class InvoiceService {
@@ -20,7 +23,23 @@ export class InvoiceService {
     private readonly prismaService: PrismaService,
     private readonly idempotencyService: IdempotencyService,
     @InjectQueue('invoice-queue') private readonly invoiceQueue: Queue,
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
   ) {}
+
+  private async getInvoiceVersion(tenantId: string) {
+    const key = `tenant:${tenantId}:invoices:version`;
+    const version = await this.cacheManager.get<number>(key);
+    if (!version) {
+      await this.cacheManager.set(key, 1, 60 * 60 * 24 * 1000); // 24h
+      return 1;
+    }
+    return version;
+  }
+  private async bumpInvoiceVersion(tenantId: string) {
+    const key = `tenant:${tenantId}:invoices:version`;
+    const version = await this.getInvoiceVersion(tenantId);
+    await this.cacheManager.set(key, version + 1, 60 * 60 * 24 * 1000);
+  }
 
   async createInvoice(
     dto: CreateInvoiceDTO,
@@ -154,10 +173,18 @@ export class InvoiceService {
       },
     );
 
+    await this.bumpInvoiceVersion(effectiveTenantId);
+
     return invoice;
   }
 
   async getInvoiceByCustomerEmail(email: string, tenantId: string) {
+    const version = await this.getInvoiceVersion(tenantId);
+    const cacheKey = `v:${version}:tenant:${tenantId}:customer:${email}:invoice`;
+    const cachedInvoice = await this.cacheManager.get<any>(cacheKey);
+    if (cachedInvoice) {
+      return cachedInvoice;
+    }
     const invoice = await this.prismaService.invoice.findFirst({
       where: {
         tenant_id: tenantId,
@@ -169,6 +196,7 @@ export class InvoiceService {
         customer: true,
       },
     });
+    await this.cacheManager.set(cacheKey, invoice, 60 * 1000); //1 minute
     return invoice;
   }
 
@@ -176,6 +204,18 @@ export class InvoiceService {
     tenantId: string,
     paginationQueryDto: PaginationQueryDto,
   ): Promise<PaginationResponseDto<Invoice>> {
+    const version = await this.getInvoiceVersion(tenantId);
+    const cacheKey = `v:${version}:tenant:${tenantId}:invoices:take:${paginationQueryDto.take}:skip:${paginationQueryDto.skip}`;
+    const cachedInvoices =
+      await this.cacheManager.get<PaginationResponseDto<Invoice>>(cacheKey);
+    if (cachedInvoices) {
+      return new PaginationResponseDto(
+        cachedInvoices.data,
+        cachedInvoices.meta.total,
+        cachedInvoices.meta.page,
+        cachedInvoices.meta.limit,
+      );
+    }
     const whereClause = tenantId ? { tenant_id: tenantId } : {};
     const [invoices, total] = await this.prismaService.$transaction([
       this.prismaService.invoice.findMany({
@@ -193,11 +233,13 @@ export class InvoiceService {
       this.prismaService.invoice.count({ where: whereClause }),
     ]);
 
-    return new PaginationResponseDto(
+    const paginatedResponse = new PaginationResponseDto(
       invoices,
       total,
       paginationQueryDto.page,
       paginationQueryDto.limit,
     );
+    await this.cacheManager.set(cacheKey, paginatedResponse, 5 * 60 * 1000);
+    return paginatedResponse;
   }
 }

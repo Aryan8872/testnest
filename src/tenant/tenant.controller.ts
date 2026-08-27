@@ -11,6 +11,7 @@ import {
 import { TenantService } from './tenant.service.js';
 import { CreateTenantDto } from './dto/create-tenant.dto.js';
 import { UpdateTenantDto } from './dto/update-tenant.dto.js';
+import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
 
 @Controller('tenant')
 export class TenantController {
@@ -22,8 +23,8 @@ export class TenantController {
   }
 
   @Get()
-  findAll(@Query('page') page: number, @Query('limit') limit: number) {
-    return this.tenantService.findAll(page, limit);
+  findAll(@Query() paginationQueryDto: PaginationQueryDto) {
+    return this.tenantService.findAll(paginationQueryDto);
   }
 
   @Get(':id')
