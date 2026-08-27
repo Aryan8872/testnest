@@ -1,3 +1,4 @@
+import { Redis, type RedisOptions } from 'ioredis';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
@@ -18,10 +19,25 @@ import { TenantModule } from './tenant/tenant.module.js';
 import { LoggerModule } from 'nestjs-pino';
 import { PrometheusModule } from '@willsoto/nestjs-prometheus';
 import { getRedisConnection } from './common/redis/redis.connection.js';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+    }),
+    ThrottlerModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: () => ({
+        throttlers: [
+          { name: 'short', ttl: 1000, limit: 10 },
+          { name: 'medium', ttl: 60000, limit: 100 },
+        ],
+        storage: new ThrottlerStorageRedisService(
+          new Redis(getRedisConnection() as RedisOptions),
+        ),
+      }),
     }),
     PrismaModule,
     LoggerModule.forRoot({
@@ -77,7 +93,14 @@ import { getRedisConnection } from './common/redis/redis.connection.js';
     TenantModule,
   ],
   controllers: [AppController],
-  providers: [AppService, PdfService],
+  providers: [
+    AppService,
+    PdfService,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule implements NestModule {
   // Class-based middleware needs Dependency Injection, so it's wired through configure() — not app.use()

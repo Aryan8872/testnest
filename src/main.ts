@@ -14,6 +14,7 @@ import { ResponseInterceptor } from './common/interceptor/response/response.inte
 import { IdempotencyInterceptor } from './common/interceptor/idempotency/idempotency.interceptor.js';
 import { IdempotencyService } from './common/idempotency/idempotency.service.js';
 import { Logger } from 'nestjs-pino';
+import helmet from 'helmet';
 
 async function bootstrap() {
   Sentry.init({
@@ -35,6 +36,20 @@ async function bootstrap() {
     },
   });
   const app = await NestFactory.create(AppModule);
+  app.enableShutdownHooks();
+  app.use(helmet());
+  app.enableCors({
+    origin: process.env.ALLOWED_ORIGINS?.split(',') ?? '*',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+    credentials: true,
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-API-KEY',
+      'Idempotency-Key',
+      'X-Request-ID',
+    ],
+  });
   // Override the default logger with Pino
   app.useLogger(app.get(Logger));
   app.enableVersioning({
