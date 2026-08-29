@@ -6,7 +6,7 @@ import { InvoiceModule } from './invoice/invoice.module.js';
 import { CustomerModule } from './customer/customer.module.js';
 import { UserModule } from './user/user.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ApiKeyMiddleware } from './common/middleware/api-key.middleware.js';
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware.js';
 import { AuthModule } from './auth/auth.module.js';
@@ -24,6 +24,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis';
 import { CacheModule } from '@nestjs/cache-manager';
 import { createKeyv } from '@keyv/redis';
+import { HealthModule } from './health/health.module.js';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -84,27 +85,32 @@ import { createKeyv } from '@keyv/redis';
     CustomerModule,
     UserModule,
     PdfModule,
-    MailerModule.forRoot({
-      transport: {
-        host: 'smtp.ethereal.email',
-        port: 587,
-        auth: {
-          user: 'Ruthie Satterfield',
-          pass: 'TWauTRhG4RUvMzmQ1z',
+    MailerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        transport: {
+          host: config.get<string>('SMTP_HOST', 'smtp.ethereal.email'),
+          port: config.get<number>('SMTP_PORT', 587),
+          auth: {
+            user: config.get<string>('SMTP_USER', 'Ruthie Satterfield'),
+            pass: config.get<string>('SMTP_PASS', 'TWauTRhG4RUvMzmQ1z'),
+          },
         },
-      },
-      defaults: {
-        from: 'noreply@cms.com',
-      },
-      template: {
-        dir: process.cwd() + '/src/templates',
-        adapter: new HandlebarsAdapter(),
-        options: {
-          strict: true,
+        defaults: {
+          from: config.get<string>('SMTP_FROM', 'noreply@cms.com'),
         },
-      },
+        template: {
+          dir: process.cwd() + '/src/templates',
+          adapter: new HandlebarsAdapter(),
+          options: {
+            strict: true,
+          },
+        },
+      }),
     }),
     TenantModule,
+    HealthModule,
   ],
   controllers: [AppController],
   providers: [
