@@ -7,7 +7,13 @@ import {
 } from '@nestjs/terminus';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { Public } from '../decorators/public.decorator.js';
+import { SkipThrottle } from '@nestjs/throttler';
 
+// Health probes must NEVER be throttled.
+// Load balancers, Railway, Kubernetes all poll these endpoints every 5-10s.
+// A 429 response would cause the orchestrator to mark the instance as unhealthy and restart it.
+// NOTE: @nestjs/throttler v6 requires explicitly naming each throttler to skip.
+@SkipThrottle({ short: true, medium: true })
 @Controller('health')
 export class HealthController {
   constructor(
