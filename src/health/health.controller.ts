@@ -8,11 +8,13 @@ import {
 import { PrismaService } from '../prisma/prisma.service.js';
 import { Public } from '../decorators/public.decorator.js';
 import { SkipThrottle } from '@nestjs/throttler';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 // Health probes must NEVER be throttled.
 // Load balancers, Railway, Kubernetes all poll these endpoints every 5-10s.
 // A 429 response would cause the orchestrator to mark the instance as unhealthy and restart it.
 // NOTE: @nestjs/throttler v6 requires explicitly naming each throttler to skip.
+@ApiTags('Health')
 @SkipThrottle({ short: true, medium: true })
 @Controller('health')
 export class HealthController {
@@ -26,6 +28,8 @@ export class HealthController {
   @Public()
   @Get('live')
   @HealthCheck()
+  @ApiOperation({ summary: 'Liveness probe for orchestrators/load balancers' })
+  @ApiResponse({ status: 200, description: 'Application is running' })
   checkLive() {
     return this.health.check([async () => ({ app: { status: 'up' } })]);
   }
@@ -33,6 +37,9 @@ export class HealthController {
   @Public()
   @Get('ready')
   @HealthCheck()
+  @ApiOperation({ summary: 'Readiness probe checking Database & Memory Heap/RSS thresholds' })
+  @ApiResponse({ status: 200, description: 'Application is ready to accept incoming traffic' })
+  @ApiResponse({ status: 503, description: 'Service unhealthy (DB down or memory threshold breached)' })
   checkReady() {
     return this.health.check([
       // 1. Check PostgreSQL Database connection via Prisma

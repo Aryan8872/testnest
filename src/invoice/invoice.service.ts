@@ -100,35 +100,25 @@ export class InvoiceService {
             message: 'At least customerId or customerData is required',
           });
         }
-        try {
-          const created = await prisma.customer.create({
-            data: {
-              email: customerData.email,
-              fullName: customerData.fullName,
-              phoneNumber: customerData.phoneNumber,
+        const customer = await prisma.customer.upsert({
+          where: {
+            tenant_id_email: {
               tenant_id: effectiveTenantId,
+              email: customerData.email,
             },
-          });
-          usedCustomerId = created.id;
-        } catch (e: any) {
-          if (
-            e instanceof Prisma.PrismaClientKnownRequestError &&
-            e.code === 'P2002'
-          ) {
-            const existing = await prisma.customer.findFirst({
-              where: {
-                email: customerData.email,
-                tenant_id: effectiveTenantId,
-              },
-            });
-            if (!existing) {
-              throw e;
-            }
-            usedCustomerId = existing?.id;
-          } else {
-            throw e;
-          }
-        }
+          },
+          update: {
+            fullName: customerData.fullName,
+            phoneNumber: customerData.phoneNumber,
+          },
+          create: {
+            email: customerData.email,
+            fullName: customerData.fullName,
+            phoneNumber: customerData.phoneNumber,
+            tenant_id: effectiveTenantId,
+          },
+        });
+        usedCustomerId = customer.id;
       } else {
         const exists = await prisma.customer.findFirst({
           where: { id: customerId, tenant_id: effectiveTenantId },
@@ -176,6 +166,18 @@ export class InvoiceService {
     await this.bumpInvoiceVersion(effectiveTenantId);
 
     return invoice;
+  }
+
+  async findById(invoiceId: string, tenantId: string) {
+    return this.prismaService.invoice.findFirst({
+      where: {
+        id: invoiceId,
+        tenant_id: tenantId,
+      },
+      include: {
+        customer: true,
+      },
+    });
   }
 
   async getInvoiceByCustomerEmail(email: string, tenantId: string) {

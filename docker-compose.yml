@@ -1,13 +1,84 @@
-version: '3.8'
 services:
+  # ==========================================
+  # PostgreSQL Database
+  # ==========================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: cms_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespass
+      POSTGRES_DB: SAAS_BILLING
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d SAAS_BILLING"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cms_network
+
+  # ==========================================
+  # Redis Cache & BullMQ Queue Broker
+  # ==========================================
   redis:
     image: redis:7-alpine
-    container_name: cms-redis
+    container_name: cms_redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
-      - redis_data:/data
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cms_network
+
+  # ==========================================
+  # NestJS Application
+  # ==========================================
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cms_api
     restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://postgres:postgrespass@postgres:5432/SAAS_BILLING?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: production-super-secret-jwt-key-change-this
+      JWT_EXPIRES_IN: 1d
+      SMTP_HOST: smtp.ethereal.email
+      SMTP_PORT: 587
+      SMTP_FROM: noreply@cms.com
+      ALLOWED_ORIGINS: "http://localhost:3000"
+      RUN_SEED: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - cms_network
 
 volumes:
-  redis_data:
+  pgdata:
+    driver: local
+  redisdata:
+    driver: local
+
+networks:
+  cms_network:
+    driver: bridge

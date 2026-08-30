@@ -15,6 +15,7 @@ import { IdempotencyInterceptor } from './common/interceptor/idempotency/idempot
 import { IdempotencyService } from './common/idempotency/idempotency.service.js';
 import { Logger } from 'nestjs-pino';
 import helmet from 'helmet';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   if (process.env.SENTRY_DSN) {
@@ -57,13 +58,26 @@ async function bootstrap() {
       },
       stopAtFirstError: false, // better UX for frontend
       exceptionFactory: (errors) => {
+        const formatErrors = (errs: any[]): any[] => {
+          const result: any[] = [];
+          for (const err of errs) {
+            if (err.constraints) {
+              result.push({
+                field: err.property,
+                errors: Object.values(err.constraints),
+              });
+            }
+            if (err.children && err.children.length > 0) {
+              result.push(...formatErrors(err.children));
+            }
+          }
+          return result;
+        };
+
         return new BadRequestException({
           errorCode: 'VALIDATION_ERROR',
           message: 'validation failed',
-          errors: errors.map((err) => ({
-            field: err.property,
-            errors: Object.values(err.constraints || {}),
-          })),
+          errors: formatErrors(errors),
         });
       },
     }),
@@ -71,9 +85,53 @@ async function bootstrap() {
   app.useGlobalInterceptors(
     // new LoggingInterceptor(),
     new ResponseInterceptor(),
-    new IdempotencyInterceptor(app.get(IdempotencyService)),
+    // IdempotencyInterceptor removed — idempotency is handled at service level
+    // in InvoiceService.createInvoice() via claimKeyIfNotExists()
   );
   app.useGlobalFilters(new GlobalExceptionFilter());
+
+  // Swagger OpenAPI 3.0 Documentation Setup
+  const config = new DocumentBuilder()
+    .setTitle('Enterprise SaaS CMS API')
+    .setDescription(
+      'Production-grade multi-tenant CMS API with Idempotency, BullMQ Background Jobs, Tiered Throttling, and Redis Caching.',
+    )
+    .setVersion('1.0')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Enter JWT Access Token',
+        in: 'header',
+      },
+      'JWT-auth', // This name will be referenced in @ApiBearerAuth() decorators
+    )
+    .addApiKey(
+      {
+        type: 'apiKey',
+        name: 'X-API-KEY',
+        in: 'header',
+        description: 'Tenant API Key for machine-to-machine requests',
+      },
+      'api-key',
+    )
+    .addTag('Auth', 'Authentication, Registration and User Profile')
+    .addTag('Invoices', 'Invoice Creation and Background PDF Generation')
+    .addTag('Customers', 'Tenant Customer Management')
+    .addTag('Tenants', 'Multi-tenant Organization Management')
+    .addTag('Users', 'User Accounts Management')
+    .addTag('Health', 'Liveness and Readiness Probes')
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  });
+
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

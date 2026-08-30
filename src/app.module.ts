@@ -25,10 +25,13 @@ import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis'
 import { CacheModule } from '@nestjs/cache-manager';
 import { createKeyv } from '@keyv/redis';
 import { HealthModule } from './health/health.module.js';
+import { validateEnv } from './common/config/env.validation.js';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      validate: validateEnv,
     }),
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
@@ -93,19 +96,15 @@ import { HealthModule } from './health/health.module.js';
           host: config.get<string>('SMTP_HOST', 'smtp.ethereal.email'),
           port: config.get<number>('SMTP_PORT', 587),
           auth: {
-            user: config.get<string>('SMTP_USER', 'Ruthie Satterfield'),
-            pass: config.get<string>('SMTP_PASS', 'TWauTRhG4RUvMzmQ1z'),
+            user: config.get<string>(
+              'SMTP_USER',
+              'hakdgegahpjif4g6@ethereal.email',
+            ),
+            pass: config.get<string>('SMTP_PASS', 'YzjWhASGh8gdUjH7Vr'),
           },
         },
         defaults: {
           from: config.get<string>('SMTP_FROM', 'noreply@cms.com'),
-        },
-        template: {
-          dir: process.cwd() + '/src/templates',
-          adapter: new HandlebarsAdapter(),
-          options: {
-            strict: true,
-          },
         },
       }),
     }),

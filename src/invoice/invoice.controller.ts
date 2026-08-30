@@ -19,7 +19,16 @@ import {
 } from '../decorators/current-user.decorator.js';
 import { CurrentTenant } from '../decorators/current-tenant.decorator.js';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiHeader,
+} from '@nestjs/swagger';
 
+@ApiTags('Invoices')
+@ApiBearerAuth('JWT-auth')
 @Controller('invoice')
 @UseGuards(JwtAuthGuard)
 export class InvoiceController {
@@ -27,6 +36,15 @@ export class InvoiceController {
 
   @Post('/new')
   @HttpCode(201)
+  @ApiOperation({ summary: 'Create invoice with idempotency and dispatch PDF background job' })
+  @ApiHeader({
+    name: 'Idempotency-Key',
+    description: 'Unique UUID / key to guarantee at-most-once processing',
+    required: true,
+  })
+  @ApiResponse({ status: 201, description: 'Invoice created and PDF generation queued' })
+  @ApiResponse({ status: 400, description: 'Validation error or missing idempotency key' })
+  @ApiResponse({ status: 409, description: 'Concurrent identical request in progress' })
   async createInvoice(
     @Body() dto: CreateInvoiceDTO,
     @Req() req: Request,
@@ -54,6 +72,8 @@ export class InvoiceController {
     return result;
   }
   @Get('/all')
+  @ApiOperation({ summary: 'Get paginated list of tenant invoices (cached in Redis)' })
+  @ApiResponse({ status: 200, description: 'Paginated invoice list' })
   findAllInvoice(
     @CurrentTenant() tenantId: string,
     @Query() paginationQueryDto: PaginationQueryDto,

@@ -39,6 +39,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           path: request.originalUrl,
           method: request.method,
           prismaCode: exception.code,
+          message: exception.message,
+          meta: exception.meta,
         }),
       );
 

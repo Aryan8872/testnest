@@ -34,50 +34,68 @@ export class InvoiceProcessor extends WorkerHost {
     customerEmail: string;
     tenantId: string;
   }) {
-    // 1. Fetch full invoice from DB
-    this.logger.log(
-      `[InvoiceProcessor] Fetching data for invoice ${data.invoiceId}...`,
-    );
-    const invoice = await this.invoiceService.getInvoiceByCustomerEmail(
-      data.customerEmail,
-      data.tenantId,
-    );
+    try {
+      // 1. Fetch full invoice from DB by primary ID
+      this.logger.log(
+        `[InvoiceProcessor] Fetching data for invoice ${data.invoiceId}...`,
+      );
+      let invoice = await this.invoiceService.findById(
+        data.invoiceId,
+        data.tenantId,
+      );
 
-    if (!invoice) {
-      this.logger.warn(`Invoice not found for ${data.invoiceId}`);
-      return;
-    }
+      if (!invoice) {
+        invoice = await this.invoiceService.getInvoiceByCustomerEmail(
+          data.customerEmail,
+          data.tenantId,
+        );
+      }
 
-    // 2. Generate PDF
-    this.logger.log(
-      `[InvoiceProcessor] Generating PDF for invoice ${data.invoiceId}...`,
-    );
-    const pdfBuffer = await this.pdfService.generateInvoicePdf(invoice);
+      if (!invoice) {
+        this.logger.warn(`Invoice not found for ${data.invoiceId}`);
+        return;
+      }
 
-    // 3. Send Email
-    this.logger.log(
-      `[InvoiceProcessor] Sending email to ${data.customerEmail}...`,
-    );
+      // 2. Generate PDF
+      this.logger.log(
+        `[InvoiceProcessor] Generating PDF for invoice ${data.invoiceId}...`,
+      );
+      const pdfBuffer = await this.pdfService.generateInvoicePdf(invoice);
+      this.logger.log(
+        `[InvoiceProcessor] PDF generated successfully (${pdfBuffer.length} bytes)`,
+      );
 
-    const info = await this.mailerService.sendMail({
-      to: data.customerEmail,
-      subject: `Your Invoice from CMS (ID: ${invoice.id})`,
-      text: 'Thank you for your business. Please find your invoice attached.',
-      attachments: [
-        {
-          filename: `invoice-${invoice.id}.pdf`,
-          content: pdfBuffer,
-        },
-      ],
-    });
+      // 3. Send Email
+      this.logger.log(
+        `[InvoiceProcessor] Sending email to ${data.customerEmail}...`,
+      );
 
-    this.logger.log(
-      `[InvoiceProcessor] Successfully completed all background tasks for invoice ${data.invoiceId}!`,
-    );
+      const info = await this.mailerService.sendMail({
+        to: data.customerEmail,
+        subject: `Your Invoice from CMS (ID: ${invoice.id})`,
+        text: 'Thank you for your business. Please find your invoice attached.',
+        attachments: [
+          {
+            filename: `invoice-${invoice.id}.pdf`,
+            content: pdfBuffer,
+          },
+        ],
+      });
 
-    const previewUrl = nodemailer.getTestMessageUrl(info);
-    if (previewUrl) {
-      this.logger.log(`[InvoiceProcessor] Preview Email URL: ${previewUrl}`);
+      this.logger.log(
+        `[InvoiceProcessor] Successfully completed all background tasks for invoice ${data.invoiceId}!`,
+      );
+
+      const previewUrl = nodemailer.getTestMessageUrl(info);
+      if (previewUrl) {
+        this.logger.log(`[InvoiceProcessor] Preview Email URL: ${previewUrl}`);
+      }
+    } catch (error: any) {
+      this.logger.error(
+        `[InvoiceProcessor] FAILED for invoice ${data.invoiceId}: ${error.message}`,
+        error.stack,
+      );
+      throw error; // Re-throw so BullMQ marks the job as failed
     }
   }
 }

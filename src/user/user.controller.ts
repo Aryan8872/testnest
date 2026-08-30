@@ -18,14 +18,24 @@ import { Roles } from '../decorators/roles.decorator.js';
 import { CurrentTenant } from '../decorators/current-tenant.decorator.js';
 import { USERROLE } from '@prisma/client';
 import { PaginationQueryDto } from '../common/dto/pagination-query.dto.js';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiParam,
+} from '@nestjs/swagger';
 
+@ApiTags('Users')
+@ApiBearerAuth('JWT-auth')
 @Controller('user')
-// @UseGuards(JwtAuthGuard, RoleGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post('new')
-  // @Roles(USERROLE.ADMIN, USERROLE.SUPERADMIN)
+  @ApiOperation({ summary: 'Create a new user within the tenant' })
+  @ApiResponse({ status: 201, description: 'User created successfully' })
+  @ApiResponse({ status: 400, description: 'Validation failed' })
   async create(
     @Body() createUserDto: CreateUserDto,
     @CurrentTenant() tenantId: string,
@@ -35,6 +45,8 @@ export class UserController {
 
   @Get('all')
   @Roles(USERROLE.ADMIN, USERROLE.SUPERADMIN)
+  @ApiOperation({ summary: 'Get paginated list of users (Admin only, cached in Redis)' })
+  @ApiResponse({ status: 200, description: 'Paginated user list returned' })
   findAll(
     @CurrentTenant() tenantId: string,
     @Query() paginationQueryDto: PaginationQueryDto,
@@ -43,12 +55,20 @@ export class UserController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get user details by ID' })
+  @ApiParam({ name: 'id', description: 'User UUID' })
+  @ApiResponse({ status: 200, description: 'User details' })
+  @ApiResponse({ status: 404, description: 'User not found' })
   findOne(@Param('id') id: string, @CurrentTenant() tenantId: string) {
     return this.userService.findOne(id, tenantId);
   }
 
   @Patch(':id')
   @Roles(USERROLE.ADMIN, USERROLE.SUPERADMIN)
+  @ApiOperation({ summary: 'Update user details (Admin only)' })
+  @ApiParam({ name: 'id', description: 'User UUID' })
+  @ApiResponse({ status: 200, description: 'User updated successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
   update(
     @Param('id') id: string,
     @Body() updateUserDto: UpdateUserDto,
@@ -59,6 +79,10 @@ export class UserController {
 
   @Delete(':id')
   @Roles(USERROLE.ADMIN, USERROLE.SUPERADMIN)
+  @ApiOperation({ summary: 'Delete user (Admin only)' })
+  @ApiParam({ name: 'id', description: 'User UUID' })
+  @ApiResponse({ status: 200, description: 'User deleted successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
   remove(@Param('id') id: string, @CurrentTenant() tenantId: string) {
     return this.userService.remove(id, tenantId);
   }

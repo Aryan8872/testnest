@@ -10,14 +10,14 @@ import {
 export class AtLeastOneOfConstraint implements ValidatorConstraintInterface {
   validate(_: any, args: ValidationArguments): boolean {
     const obj = args.object as Record<string, any>;
+    if (!obj) return false;
     const properties: string[] = args.constraints;
     return properties.some((p) => {
       const v = obj[p];
-      return (
-        v !== undefined &&
-        v !== null &&
-        !(typeof v === 'string' && v.trim() === '')
-      );
+      if (v === undefined || v === null) return false;
+      if (typeof v === 'string' && v.trim() === '') return false;
+      if (typeof v === 'object' && Object.keys(v).length === 0) return false;
+      return true;
     });
   }
 
@@ -33,12 +33,11 @@ export function AtLeastOneOf(
   properties: string[],
   validationOptions?: ValidationOptions,
 ) {
-  return function (constructor: Function) {
-    // register a validation on a fake property name on the prototype
+  return function (target: any, propertyKey?: string) {
     registerDecorator({
       name: 'AtLeastOneOf',
-      target: constructor,
-      propertyName: '__atLeastOneOf__', // arbitrary property name
+      target: target.constructor || target,
+      propertyName: propertyKey || 'atLeastOneOf',
       options: validationOptions,
       constraints: properties,
       validator: AtLeastOneOfConstraint,

@@ -19,8 +19,7 @@ export class CreateCustomerDto {
   )
   email!: string;
 
-  @IsOptional()
   @IsString()
-  @IsPhoneNumber('NP')
+  @IsNotEmpty()
   phoneNumber!: string;
 }
