@@ -3,5 +3,6 @@ import { PdfService } from './pdf.service.js';
 
 @Module({
   providers: [PdfService],
+  exports: [PdfService],
 })
 export class PdfModule {}
