@@ -4,24 +4,31 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { Observable } from 'rxjs';
+import { ApiKeyService } from '../../../api-key/api-key.service.js';
 
 @Injectable()
 export class ApikeyguardGuard implements CanActivate {
-  constructor(private readonly configService: ConfigService) {}
-  canActivate(
-    context: ExecutionContext,
-  ): boolean | Promise<boolean> | Observable<boolean> {
+  constructor(private readonly apiKeyService: ApiKeyService) {}
+
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-    const apikey = request.headers('x-api-key');
-    const expectedApiKey = this.configService.get<string>('INTERNAL_API_KEY');
-    if (typeof apikey !== 'string' || !apikey || apikey !== expectedApiKey) {
+    const apiKeyHeader =
+      request.headers['x-api-key'] || request.headers['X-API-KEY'];
+
+    if (!apiKeyHeader || typeof apiKeyHeader !== 'string') {
       throw new UnauthorizedException({
-        errrorCode: 'INVALID_API_KEY',
-        message: 'Authentication required',
+        errorCode: 'MISSING_API_KEY',
+        message: 'x-api-key header is required for this endpoint',
       });
     }
+
+    const validatedContext =
+      await this.apiKeyService.validateApiKey(apiKeyHeader);
+
+    // Attach validated tenant context to request
+    request.apiKey = validatedContext;
+    request.tenantId = validatedContext.tenantId;
+
     return true;
   }
 }

@@ -65,11 +65,29 @@ services:
       SMTP_FROM: noreply@cms.com
       ALLOWED_ORIGINS: "http://localhost:3000"
       RUN_SEED: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4318/v1/traces"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+      jaeger:
+        condition: service_started
+    networks:
+      - cms_network
+
+  # ==========================================
+  # Jaeger Distributed Tracing & APM UI
+  # ==========================================
+  jaeger:
+    image: jaegertracing/all-in-one:1.54
+    container_name: cms_jaeger
+    restart: unless-stopped
+    ports:
+      - "16686:16686" # Web UI
+      - "4318:4318"   # OTLP HTTP receiver
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
     networks:
       - cms_network
 

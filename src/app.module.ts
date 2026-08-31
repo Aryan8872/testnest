@@ -25,6 +25,7 @@ import { ThrottlerStorageRedisService } from '@nest-lab/throttler-storage-redis'
 import { CacheModule } from '@nestjs/cache-manager';
 import { createKeyv } from '@keyv/redis';
 import { HealthModule } from './health/health.module.js';
+import { ApiKeyModule } from './api-key/api-key.module.js';
 import { validateEnv } from './common/config/env.validation.js';
 
 @Module({
@@ -91,24 +92,32 @@ import { validateEnv } from './common/config/env.validation.js';
     MailerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        transport: {
-          host: config.get<string>('SMTP_HOST', 'smtp.ethereal.email'),
-          port: config.get<number>('SMTP_PORT', 587),
-          auth: {
-            user: config.get<string>(
-              'SMTP_USER',
-              'hakdgegahpjif4g6@ethereal.email',
-            ),
-            pass: config.get<string>('SMTP_PASS', 'YzjWhASGh8gdUjH7Vr'),
+      useFactory: (config: ConfigService) => {
+        const port = config.get<number>('SMTP_PORT', 587);
+        const isSecure =
+          config.get<string>('SMTP_SECURE') === 'true' || port === 465;
+
+        return {
+          transport: {
+            host: config.get<string>('SMTP_HOST', 'smtp.ethereal.email'),
+            port: port,
+            secure: isSecure,
+            auth: {
+              user: config.get<string>(
+                'SMTP_USER',
+                'hakdgegahpjif4g6@ethereal.email',
+              ),
+              pass: config.get<string>('SMTP_PASS', 'YzjWhASGh8gdUjH7Vr'),
+            },
           },
-        },
-        defaults: {
-          from: config.get<string>('SMTP_FROM', 'noreply@cms.com'),
-        },
-      }),
+          defaults: {
+            from: config.get<string>('SMTP_FROM', 'noreply@cms.com'),
+          },
+        };
+      },
     }),
     TenantModule,
+    ApiKeyModule,
     HealthModule,
   ],
   controllers: [AppController],
