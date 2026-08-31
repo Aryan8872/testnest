@@ -33,6 +33,10 @@ describe('AuthService', () => {
     del: jest.fn(),
   };
 
+  const mockMailerService = {
+    sendMail: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -41,6 +45,10 @@ describe('AuthService', () => {
         { provide: JwtService, useValue: mockJwtService },
         { provide: ConfigService, useValue: mockConfigService },
         { provide: CACHE_MANAGER, useValue: mockCacheManager },
+        {
+          provide: (await import('@nestjs-modules/mailer')).MailerService,
+          useValue: mockMailerService,
+        },
       ],
     }).compile();
 

@@ -6,7 +6,6 @@ import {
   NestInterceptor,
 } from '@nestjs/common';
 import { Observable, tap } from 'rxjs';
-import { logger } from '../../../logger/logger.service.js';
 import { RequestWithId } from '../../middleware/request-id.middleware.js';
 import { Request } from 'express';
 

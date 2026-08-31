@@ -87,11 +87,38 @@ export class TenantService {
     return tenant;
   }
 
-  update(id: number, updateTenantDto: UpdateTenantDto) {
-    return `This action updates a #${id} tenant`;
+  async update(id: string, updateTenantDto: UpdateTenantDto) {
+    if (!id) throw new BadRequestException('tenant id is required');
+    await this.findOne(id);
+
+    if (updateTenantDto.email) {
+      const duplicate = await this.prismaService.tenant.findFirst({
+        where: { email: updateTenantDto.email, NOT: { id } },
+      });
+      if (duplicate) {
+        throw new ConflictException({
+          errorCode: 'EMAIL_ALREADY_EXISTS',
+          message: 'Another tenant already uses this email address',
+        });
+      }
+    }
+
+    const updated = await this.prismaService.tenant.update({
+      where: { id },
+      data: updateTenantDto,
+    });
+
+    await this.cacheManager.del(this.getTenantCacheKey(id));
+    return updated;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} tenant`;
+  async remove(id: string) {
+    if (!id) throw new BadRequestException('tenant id is required');
+    await this.findOne(id);
+    await this.cacheManager.del(this.getTenantCacheKey(id));
+
+    return this.prismaService.tenant.delete({
+      where: { id },
+    });
   }
 }
