@@ -33,8 +33,16 @@ export const envSchema = z.object({
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().default('noreply@cms.com'),
 
-  // CORS
+  // CORS & App
   ALLOWED_ORIGINS: z.string().default('http://localhost:3000'),
+  APP_URL: z.string().default('http://localhost:3000'),
+
+  // Payment Gateways (eSewa & Khalti)
+  ESEWA_MERCHANT_CODE: z.string().default('EPAYTEST'),
+  ESEWA_SECRET_KEY: z.string().default('8gBm/:&EnhH.1'),
+  ESEWA_BASE_URL: z.string().default('https://rc-epay.esewa.com.np'),
+  KHALTI_SECRET_KEY: z.string().default('test_secret_key_67890'),
+  KHALTI_BASE_URL: z.string().default('https://a.khalti.com'),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;

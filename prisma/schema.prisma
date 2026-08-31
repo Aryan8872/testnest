@@ -8,7 +8,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
 }
 
 enum INVOICESTATUS {
@@ -17,6 +17,13 @@ enum INVOICESTATUS {
   PAID
   OVERDUE
   CANCELLED
+  PARTIALLY_PAID
+}
+
+enum PAYMENTGATEWAY {
+  ESEWA
+  KHALTI
+  BANK_TRANSFER
 }
 
 enum USERROLE {
@@ -76,15 +83,21 @@ model Tenant {
 }
 
 model Payment {
-  id           String   @id @default(cuid())
-  invoice_id   String
-  invoice      Invoice  @relation(fields: [invoice_id], references: [id])
-  customer_id  String
-  customer     Customer @relation(fields: [customer_id], references: [id])
-  payment_date DateTime @default(now())
-  tenant_id    String
-  tenant       Tenant   @relation(fields: [tenant_id], references: [id])
-  created_at   DateTime @default(now())
+  id             String         @id @default(cuid())
+  invoice_id     String
+  invoice        Invoice        @relation(fields: [invoice_id], references: [id])
+  customer_id    String
+  customer       Customer       @relation(fields: [customer_id], references: [id])
+  payment_date   DateTime       @default(now())
+  tenant_id      String
+  tenant         Tenant         @relation(fields: [tenant_id], references: [id])
+  created_at     DateTime       @default(now())
+  amount         Int            // payment amount in paisa (NPR × 100)
+  gateway        PAYMENTGATEWAY
+  transaction_id String         @unique // our internal tracking UUID (eSewa txn_uuid / Khalti pidx)
+  fee            Int?           // gateway fee in paisa
+  gateway_ref_id String?        // eSewa transaction_code / Khalti transaction_id from lookup
+  raw_payload    Json?          // full gateway payload for auditing
 
   @@index([tenant_id, customer_id, created_at])
   @@index([tenant_id, invoice_id, created_at])
@@ -106,20 +119,20 @@ model Customer {
 }
 
 model User {
-  id                    String    @id @default(cuid())
-  fullName              String
-  email                 String    @unique
-  password              String
-  phoneNumber           String
-  role                  USERROLE  @default(BILLING)
-  hashedRefreshToken    String?
+  id                     String    @id @default(cuid())
+  fullName               String
+  email                  String    @unique
+  password               String
+  phoneNumber            String
+  role                   USERROLE  @default(BILLING)
+  hashedRefreshToken     String?
   password_reset_token   String?
   password_reset_expires DateTime?
-  created_at            DateTime  @default(now())
-  updated_at            DateTime  @updatedAt
-  is_enabled            Boolean   @default(true)
-  tenant_id             String
-  tenant                Tenant    @relation(fields: [tenant_id], references: [id])
+  created_at             DateTime  @default(now())
+  updated_at             DateTime  @updatedAt
+  is_enabled             Boolean   @default(true)
+  tenant_id              String
+  tenant                 Tenant    @relation(fields: [tenant_id], references: [id])
 
   @@index([tenant_id, created_at])
   @@index([tenant_id, role, created_at])

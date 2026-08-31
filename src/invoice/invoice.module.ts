@@ -5,6 +5,7 @@ import { IdempotencyModule } from '../common/idempotency/idempotency.module.js';
 import { BullModule } from '@nestjs/bullmq';
 import { InvoiceProcessor } from './invoice.processor.js';
 import { PdfService } from '../common/pdf/pdf.service.js';
+import { InvoiceCronService } from './invoice-cron.service.js';
 
 @Module({
   imports: [
@@ -14,6 +15,6 @@ import { PdfService } from '../common/pdf/pdf.service.js';
     }),
   ],
   controllers: [InvoiceController],
-  providers: [InvoiceService, InvoiceProcessor, PdfService],
+  providers: [InvoiceService, InvoiceProcessor, PdfService, InvoiceCronService],
 })
 export class InvoiceModule {}

@@ -12,7 +12,6 @@ import { RequestIdMiddleware } from './common/middleware/request-id.middleware.j
 import { AuthModule } from './auth/auth.module.js';
 import { BullModule } from '@nestjs/bullmq';
 import { MailerModule } from '@nestjs-modules/mailer';
-import { HandlebarsAdapter } from '@nestjs-modules/mailer/adapters/handlebars.adapter';
 import { PdfModule } from './common/pdf/pdf.module.js';
 import { PdfService } from './common/pdf/pdf.service.js';
 import { TenantModule } from './tenant/tenant.module.js';
@@ -27,6 +26,8 @@ import { createKeyv } from '@keyv/redis';
 import { HealthModule } from './health/health.module.js';
 import { ApiKeyModule } from './api-key/api-key.module.js';
 import { validateEnv } from './common/config/env.validation.js';
+import { ScheduleModule } from '@nestjs/schedule';
+import { PaymentModule } from './payment/payment.module.js';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { validateEnv } from './common/config/env.validation.js';
       isGlobal: true,
       validate: validateEnv,
     }),
+    ScheduleModule.forRoot(),
     ThrottlerModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: () => ({
@@ -119,6 +121,7 @@ import { validateEnv } from './common/config/env.validation.js';
     TenantModule,
     ApiKeyModule,
     HealthModule,
+    PaymentModule,
   ],
   controllers: [AppController],
   providers: [
