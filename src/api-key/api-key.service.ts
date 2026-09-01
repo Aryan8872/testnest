@@ -40,7 +40,11 @@ export class ApiKeyService {
    * Format: cms_live_<32 hex chars>
    * Prefix: cms_live_<first 6 hex chars>
    */
-  private generateRawKey(): { rawKey: string; prefix: string; keyHash: string } {
+  private generateRawKey(): {
+    rawKey: string;
+    prefix: string;
+    keyHash: string;
+  } {
     const entropy = randomBytes(24).toString('hex'); // 48 chars
     const rawKey = `cms_live_${entropy}`;
     const prefix = `cms_live_${entropy.slice(0, 8)}`;
@@ -114,7 +118,10 @@ export class ApiKeyService {
   /**
    * Revoke an API Key immediately and evict from Redis cache
    */
-  async revokeApiKey(tenantId: string, id: string): Promise<{ success: boolean; message: string }> {
+  async revokeApiKey(
+    tenantId: string,
+    id: string,
+  ): Promise<{ success: boolean; message: string }> {
     const key = await this.prisma.apiKey.findFirst({
       where: { id, tenant_id: tenantId },
     });
@@ -211,7 +218,8 @@ export class ApiKeyService {
     const cacheKey = `apikey:hash:${keyHash}`;
 
     // 1. Check Redis Cache for <1ms authentication
-    const cached = await this.cacheManager.get<ValidatedApiKeyContext>(cacheKey);
+    const cached =
+      await this.cacheManager.get<ValidatedApiKeyContext>(cacheKey);
     if (cached) {
       // Asynchronously record last_used_at without blocking request
       this.prisma.apiKey
@@ -263,7 +271,11 @@ export class ApiKeyService {
     };
 
     // Cache valid result in Redis
-    await this.cacheManager.set(cacheKey, validatedContext, 60 * 60 * 24 * 1000);
+    await this.cacheManager.set(
+      cacheKey,
+      validatedContext,
+      60 * 60 * 24 * 1000,
+    );
 
     // Update last used timestamp
     this.prisma.apiKey

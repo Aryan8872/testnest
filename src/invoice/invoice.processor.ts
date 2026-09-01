@@ -6,8 +6,16 @@ import { PdfService } from '../common/pdf/pdf.service.js';
 import { MailerService } from '@nestjs-modules/mailer';
 import * as nodemailer from 'nodemailer';
 
+export interface GenerateAndSendInvoiceJobPayload {
+  invoiceId: string;
+  customerEmail: string;
+  tenantId: string;
+}
+
 @Processor('invoice-queue')
 export class InvoiceProcessor extends WorkerHost {
+  private readonly logger = new Logger(InvoiceProcessor.name);
+
   constructor(
     private readonly invoiceService: InvoiceService,
     private readonly pdfService: PdfService,
@@ -15,9 +23,8 @@ export class InvoiceProcessor extends WorkerHost {
   ) {
     super();
   }
-  private readonly logger = new Logger(InvoiceProcessor.name);
 
-  async process(job: Job<any, any, string>): Promise<any> {
+  async process(job: Job<GenerateAndSendInvoiceJobPayload, void, string>): Promise<void> {
     this.logger.log(`Processing background job ${job.id} of type ${job.name}`);
 
     switch (job.name) {
@@ -29,11 +36,7 @@ export class InvoiceProcessor extends WorkerHost {
     }
   }
 
-  private async handleGenerateAndSend(data: {
-    invoiceId: string;
-    customerEmail: string;
-    tenantId: string;
-  }) {
+  private async handleGenerateAndSend(data: GenerateAndSendInvoiceJobPayload): Promise<void> {
     try {
       // 1. Fetch full invoice from DB by primary ID
       this.logger.log(

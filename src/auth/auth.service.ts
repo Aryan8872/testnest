@@ -85,7 +85,7 @@ export class AuthService {
     const accessTokenExpiresIn =
       this.configService.get<string>('JWT_EXPIRES_IN') || '15m';
     const secret =
-      this.configService.get<string>('JWT_SECRET') || 'verysecret';
+      this.configService.getOrThrow<string>('JWT_SECRET');
 
     const accessToken = this.jwtService.sign(payload, {
       expiresIn: accessTokenExpiresIn as any,

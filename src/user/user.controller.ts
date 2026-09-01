@@ -29,11 +29,13 @@ import {
 @ApiTags('Users')
 @ApiBearerAuth('JWT-auth')
 @Controller('user')
+@UseGuards(JwtAuthGuard, RoleGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Post('new')
-  @ApiOperation({ summary: 'Create a new user within the tenant' })
+  @Roles(USERROLE.ADMIN, USERROLE.SUPERADMIN)
+  @ApiOperation({ summary: 'Create a new user within the tenant (Admin only)' })
   @ApiResponse({ status: 201, description: 'User created successfully' })
   @ApiResponse({ status: 400, description: 'Validation failed' })
   async create(

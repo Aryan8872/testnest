@@ -12,6 +12,13 @@ export class ApikeyguardGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
+
+    // 1. If ApiKeyMiddleware already validated and attached the context, reuse it (0ms redundant check)
+    if (request.apiKey && request.tenantId) {
+      return true;
+    }
+
+    // 2. Otherwise extract and strictly validate
     const apiKeyHeader =
       request.headers['x-api-key'] || request.headers['X-API-KEY'];
 
